@@ -7,6 +7,51 @@ from modeling_siglip import SiglipVisionConfig, SiglipVisionModel
 from configs import PaliGemmaConfig, GemmaConfig
 
 
+class GemmaDecoderLayer(nn.Module):
+
+    def __init__(self, config: GemmaConfig, layer_idx: int):
+        super().__init__()
+        self.hidden_size = config.hidden_size
+
+        self.self_attn = GemmaAttention(config=config, layer_idx=layer_idx)
+
+        self.mlp = GemmaMLP(config)
+        self.input_layernorm = GemmaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.post_attention_layernorm = GemmaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        kv_cache: Optional[KVCache] = None,
+    ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
+        residual = hidden_states
+        # [batch_size, seq_len, hidden_size]
+        hidden_states = self.input_layernorm(hidden_states)
+
+        # [batch_size, seq_len, hidden_size]
+        hidden_states, _, = self.self_attn(
+            hidden_states=hidden_states,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            kv_cache=kv_cache,
+        )
+        # [batch_size, seq_len, hidden_size]
+        hidden_states = residual + hidden_states
+
+        # [batch_size, seq_len, hidden_size]
+        residual = hidden_states
+        # [batch_size, seq_len, hidden_size]
+        hidden_states = self.post_attention_layernorm(hidden_states)
+        # [batch_size, seq_len, hidden_size]
+        hidden_states = self.mlp(hidden_states)
+        # [batch_size, seq_len, hidden_size]
+        hidden_states = residual + hidden_states
+
+        return hidden_states
+
+
 class GemmaModel(nn.Module):
 
     def __init__(self, config: GemmaConfig):
@@ -31,14 +76,14 @@ class GemmaModel(nn.Module):
         inputs_embeds: Optional[torch.FloatTensor] = None,
         kv_cache: Optional[KVCache] = None,
     ) -> torch.FloatTensor:
-        # [Batch_Size, Seq_Len, Hidden_Size]
+        # [batch_size, seq_len, hidden_size]
         hidden_states = inputs_embeds
-        # [Batch_Size, Seq_Len, Hidden_Size]
+        # [batch_size, seq_len, hidden_size]
         normalizer = torch.tensor(self.config.hidden_size**0.5, dtype=hidden_states.dtype)
         hidden_states = hidden_states * normalizer
 
         for decoder_layer in self.layers:
-            # [Batch_Size, Seq_Len, Hidden_Size]
+            # [batch_size, seq_len, hidden_size]
             hidden_states = decoder_layer(
                 hidden_states,
                 attention_mask=attention_mask,
@@ -46,11 +91,12 @@ class GemmaModel(nn.Module):
                 kv_cache=kv_cache,
             )
 
-        # [Batch_Size, Seq_Len, Hidden_Size]
+        # [batch_size, seq_len, hidden_size]
         hidden_states = self.norm(hidden_states)
 
-        # [Batch_Size, Seq_Len, Hidden_Size]
+        # [batch_size, seq_len, hidden_size]
         return hidden_states
+
 
 class GemmaForCausalLM(nn.Module):
 
@@ -75,8 +121,8 @@ class GemmaForCausalLM(nn.Module):
         kv_cache: Optional[KVCache] = None,
     ) -> Tuple:
 
-        # input_embeds: [Batch_Size, Seq_Len, Hidden_Size]
-        # outputs: [Batch_Size, Seq_Len, Hidden_Size]
+        # input_embeds: [batch_size, seq_len, hidden_size]
+        # outputs: [batch_size, seq_len, hidden_size]
         outputs = self.model(
             attention_mask=attention_mask,
             position_ids=position_ids,
@@ -98,13 +144,14 @@ class GemmaForCausalLM(nn.Module):
 
         return return_data
 
+
 class PaliGemmaMultiModalProjector(nn.Module):
     def __init__(self, config: PaliGemmaConfig):
         super().__init__()
         self.linear = nn.Linear(config.vision_config.hidden_size, config.vision_config.projection_dim, bias=True)
 
     def forward(self, image_features):
-        # [Batch_Size, Num_Patches, Embed_Dim] -> [Batch_Size, Num_Patches, Projection_Dim]
+        # [batch_size, num_patches, embed_dim] -> [batch_size, num_patches, projection_dim]
         hidden_states = self.linear(image_features)
         return hidden_states
 
@@ -133,16 +180,16 @@ class PaliGemmaForConditionalGeneration(nn.Module):
         _, _, embed_dim = image_features.shape
         batch_size, sequence_length = input_ids.shape
         dtype, device = inputs_embeds.dtype, inputs_embeds.device
-        # Shape: [Batch_Size, Seq_Len, Hidden_Size]
+        # shape: [batch_size, seq_len, hidden_size]
         scaled_image_features = image_features / (self.config.hidden_size**0.5)
     
         # Combine the embeddings of the image tokens, the text tokens and mask out all the padding tokens.
         final_embedding = torch.zeros(batch_size, sequence_length, embed_dim, dtype=inputs_embeds.dtype, device=inputs_embeds.device)
-        # Shape: [Batch_Size, Seq_Len]. True for text tokens
+        # shape: [batch_size, seq_len]. True for text tokens
         text_mask = (input_ids != self.config.image_token_index) & (input_ids != self.pad_token_id)
-        # Shape: [Batch_Size, Seq_Len]. True for image tokens
+        # shape: [batch_size, seq_len]. True for image tokens
         image_mask = input_ids == self.config.image_token_index
-        # Shape: [Batch_Size, Seq_Len]. True for padding tokens
+        # shape: [batch_size, seq_len]. True for padding tokens
         pad_mask = input_ids == self.pad_token_id
 
         # We need to expand the masks to the embedding dimension otherwise we can't use them in torch.where
@@ -180,7 +227,7 @@ class PaliGemmaForConditionalGeneration(nn.Module):
             )
 
         # Add the head dimension
-        # [Batch_Size, Q_Len, KV_Len] -> [Batch_Size, Num_Heads_Q, Q_Len, KV_Len]
+        # [batch_size, q_len, kv_len] -> [batch_size, num_heads_q, q_len, kv_len]
         causal_mask = causal_mask.unsqueeze(1)
 
         if kv_cache is not None and kv_cache.num_items() > 0:
@@ -207,13 +254,13 @@ class PaliGemmaForConditionalGeneration(nn.Module):
         assert torch.all(attention_mask == 1), "The input cannot be padded"
 
         # 1. Extra the input embeddings
-        # shape: (Batch_Size, Seq_Len, Hidden_Size)
+        # shape: (batch_size, seq_len, hidden_size)
         inputs_embeds = self.language_model.get_input_embeddings()(input_ids)
 
         # 2. Merge text and images
-        # [Batch_Size, Channels, Height, Width] -> [Batch_Size, Num_Patches, Embed_Dim]
+        # [batch_size, channels, height, width] -> [batch_size, num_patches, embed_dim]
         selected_image_feature = self.vision_tower(pixel_values.to(inputs_embeds.dtype))
-        # [Batch_Size, Num_Patches, Embed_Dim] -> [Batch_Size, Num_Patches, Hidden_Size]
+        # [batch_size, num_patches, embed_dim] -> [batch_size, num_patches, hidden_size]
         image_features = self.multi_modal_projector(selected_image_feature)
 
         # Merge the embeddings of the text tokens and the image tokens
