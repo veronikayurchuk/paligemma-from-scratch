@@ -1,23 +1,52 @@
-Multimodal (Vision + Language) models from scratch in PyTorch.
+# PaliGemma Implementation from Scratch
 
-In this repository, I will implement PaliGemma VLLM from scratch.
-It is a lightweight multimodal model that consist of two parts: a vision encoder (Siglip) and a language encoder (Gemma).
+A PyTorch implementation of PaliGemma, a lightweight multimodal model that combines vision and language understanding capabilities. This project implements the model architecture from scratch, providing detailed explanations and visualizations for each component.
 
-Resources:
-- [PaliGemma: A Lightweight Multimodal Model](https://arxiv.org/pdf/2407.07726)
-- [Siglip: A Lightweight Vision Encoder](https://arxiv.org/pdf/2303.15343)
-- [Gemma: A Lightweight Language Encoder](https://arxiv.org/pdf/2403.08295)
+## 📝 Description
+
+PaliGemma is a powerful yet lightweight multimodal model that consists of two main components:
+- **Vision Encoder (SigLIP)**: A lightweight vision transformer for image understanding
+- **Language Decoder (Gemma)**: A lightweight language model for text processing
+
+This implementation serves as both an educational resource and a practical implementation guide for understanding multimodal models.
+
+## 🎯 Project Goals
+
+- Implement PaliGemma architecture from scratch in PyTorch
+- Provide detailed explanations and visualizations for each component
+- Create a modular and well-documented codebase
+- [TODO] Add implementation of Gemma 2.
+- [TODO] Add finetunning example with both code and detailed explanation
+
+## 📚 Resources
+
+### Research Papers
+- [PaliGemma: A versatile 3B VLM for multimodal tasks](https://arxiv.org/pdf/2407.07726)
+- [SigLIP: A Lightweight Vision Encoder](https://arxiv.org/pdf/2303.15343)
+- [Gemma: Open Models Based on Gemini](https://arxiv.org/pdf/2403.08295)
+
+## 🏗️ Architecture
+
+![PaliGemma Architecture](/images/paligemma.png)
+
+## 📋 Implementation Steps
+
+The implementation is divided into three main steps, each with detailed explanations and code:
+
+1. **Vision Encoder (SigLIP)**
+   - File: `modeling_siglip.py`
+   - Explanation: `modeling_siglip_explanation.ipynb`
+   - Focus: Implementation of the vision encoder 
+
+2. **Language Decoder (Gemma)**
+   - File: `modeling_gemma.py`
+   - Explanation: `modeling_gemma_explanation.ipynb`
+   - Focus: Implementation of the language model architecture
+
+3. **PaliGemma Integration**
+   - TBD
 
 
-Overview:
-![PaliGemma Architecture](images/paligemma_architecture.png)
 
-
-There are 3 steps to implement PaliGemma. Each step will be accompanied by two files:
-1. A notebook with detailed explanation and visualizations.
-2. A python file with the implementation.
-
-Here are the main steps:
-Step 1: Implement Siglip. Follow modeling_siglip.py and modeling_siglip_explanation.ipynb.
-Step 2: Implement Gemma. Follow modeling_gemma.py and modeling_gemma_explanation.ipynb.
-Step 3: Implement PaliGemma. Follow modeling_pali_gemma.py and modeling_pali_gemma_explanation.ipynb.
+---
+*Note: This is a work in progress. More sections and details will be added as the implementation progresses.*
