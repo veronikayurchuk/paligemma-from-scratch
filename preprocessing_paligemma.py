@@ -118,8 +118,8 @@ class PaliGemmaProcessor:
         )
         # Convert the list of numpy arrays to a single numpy array with shape [Batch_Size, Channel, Height, Width]
         pixel_values = np.stack(pixel_values, axis=0)
-        # Convert the numpy array to a PyTorch tensor
-        pixel_values = torch.tensor(pixel_values)
+        # Convert the numpy array to a PyTorch tensor with explicit dtype
+        pixel_values = torch.tensor(pixel_values, dtype=torch.float32)
 
         # Prepend a `self.image_seq_length` number of image tokens to the prompt
         input_strings = [
