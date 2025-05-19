@@ -7,6 +7,26 @@ from modeling_siglip import SiglipVisionConfig, SiglipVisionModel
 from configs import PaliGemmaConfig, GemmaConfig
 
 
+class GemmaMLP(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+        self.hidden_size = config.hidden_size
+        self.intermediate_size = config.intermediate_size
+        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
+
+    def forward(self, x):
+        # Equivalent to:
+        # y = self.gate_proj(x) # [batch_size, seq_len, hidden_size] -> [batch_size, seq_len, intermediate_size]
+        # y = torch.gelu(y, approximate="tanh") # [batch_size, seq_len, intermediate_size]
+        # j = self.up_proj(x) # [batch_size, seq_len, hidden_size] -> [batch_size, seq_len, intermediate_size]
+        # z = y * j # [batch_size, seq_len, intermediate_size]
+        # z = self.down_proj(z) # [batch_size, seq_len, intermediate_size] -> [batch_size, seq_len, hidden_size]
+        return self.down_proj(nn.functional.gelu(self.gate_proj(x), approximate="tanh") * self.up_proj(x))
+
+
 def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
     batch, num_key_value_heads, slen, head_dim = hidden_states.shape
     if n_rep == 1:
