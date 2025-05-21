@@ -3,8 +3,41 @@ from torch import nn
 from typing import Optional, Tuple, List
 from torch.nn import CrossEntropyLoss
 import math
-from modeling_siglip import SiglipVisionConfig, SiglipVisionModel
 from configs import PaliGemmaConfig, GemmaConfig
+from modeling_siglip import SiglipVisionConfig, SiglipVisionModel
+
+
+class KVCache():
+
+    def __init__(self) -> None:
+        self.key_cache: List[torch.Tensor] = []
+        self.value_cache: List[torch.Tensor] = []
+    
+    def num_items(self) -> int:
+        if len(self.key_cache) == 0:
+            return 0
+        else:
+            # The shape of the key_cache is [batch_size, num_heads_kv, seq_len, head_dim]
+            return self.key_cache[0].shape[-2]
+
+    def update(
+        self,
+        key_states: torch.Tensor,
+        value_states: torch.Tensor,
+        layer_idx: int,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        if len(self.key_cache) <= layer_idx:
+            # If we never added anything to the KV-Cache of this layer, let's create it.
+            self.key_cache.append(key_states)
+            self.value_cache.append(value_states)
+        else:
+            # ... otherwise we concatenate the new keys with the existing ones.
+            # each tensor has shape: [batch_size, num_heads_kv, seq_len, head_dim]
+            self.key_cache[layer_idx] = torch.cat([self.key_cache[layer_idx], key_states], dim=-2)
+            self.value_cache[layer_idx] = torch.cat([self.value_cache[layer_idx], value_states], dim=-2)
+
+        # ... and then we return all the existing keys + the new ones.
+        return self.key_cache[layer_idx], self.value_cache[layer_idx]
 
 
 class GemmaRMSNorm(nn.Module):
@@ -440,8 +473,9 @@ class PaliGemmaForConditionalGeneration(nn.Module):
         # Make sure the input is right-padded
         assert torch.all(attention_mask == 1), "The input cannot be padded"
 
-        # 1. Extra the input embeddings
+        # 1. Extract the input embeddings
         # shape: (batch_size, seq_len, hidden_size)
+        # seq_len = number of image patches +1 for <bos> token + number of text tokens + 1 for "/n" token
         inputs_embeds = self.language_model.get_input_embeddings()(input_ids)
 
         # 2. Merge text and images
