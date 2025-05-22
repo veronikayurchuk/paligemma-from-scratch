@@ -38,6 +38,7 @@ def resize(
     )
     return resized_image
 
+
 def normalize(
     image: np.ndarray,
     mean: Union[float, Iterable[float]],
