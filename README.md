@@ -31,7 +31,7 @@ This project implements the model architecture from scratch, providing detailed 
 
 ## 🌟 Introduction to PaliGemma
 
-![PaliGemma Architecture](images/paligemma.png)
+![PaliGemma Architecture](visualizations/paligemma.png)
 
 PaliGemma is a lightweight vision-language model (VLM) developed by Google. It consists of two main components:
 - **Vision Encoder (SigLIP)**: A lightweight vision encoder that transforms images into meaningful embeddings
@@ -48,9 +48,9 @@ PaliGemma excels at tasks requiring both visual and textual understanding, such 
 
 In this tutorial, we will dive into the implementation of SigLIP, Gemma and data preprocessing block to create a PaliGemma model from scratch. Gradually reviewing each building block of both:
 -  SigLIP vision encoder  
-![Siglip Architecture](images/Siglip_explained.png)
+![Siglip Architecture](visualizations/Siglip_explained.png)
 - Gemma Transformer decoder.
-![Gemma Architecture](images/GemmaForCasualLM_explained.png)
+![Gemma Architecture](visualizations/GemmaForCasualLM_explained.png)
 
 At the end of this tutorial, we will load the weight of the trained PaliGamma model from HuggingFace and use it to generate text responses based on both the visual input and any textual prompts.
 
@@ -80,7 +80,7 @@ In PaliGemma, the SigLIP vision encoder extracts meaningful representations from
 
 Let's dive into the architecture of the SigLIP Vision Transformer.
 
-![Siglip Architecture](images/Siglip_explained.png)
+![Siglip Architecture](visualizations/Siglip_explained.png)
 
 The SigLIP Vision Transformer (ViT) architecture consists of several key components:
 
@@ -97,11 +97,11 @@ Contrastive Vision Encoder is represented in a PaliGemma model by the **SiglipVi
 
 It takes raw pixel values as input and returns the final hidden states of shape [batch_size, num_patches, embed_dim], where num_patches is the number of patches in the image (256 patches for 224x224 image) and embed_dim is the dimension of the hidden states (1152 in PaliGemma).
 
-![SigLIP Vision Transformer Explained](images/SiglipVisionTransformer_explained.png)
+![SigLIP Vision Transformer Explained](visualizations/SiglipVisionTransformer_explained.png)
 
 Let's examine the code implementation of the **SiglipVisionTransformer** class:
 
-![SigLIP Vision Transformer Code](images/SiglipVisionTransformer_with_code.png)
+![SigLIP Vision Transformer Code](visualizations/SiglipVisionTransformer_with_code.png)
 
 ```python
 class SiglipVisionTransformer(nn.Module):
@@ -128,7 +128,7 @@ class SiglipVisionTransformer(nn.Module):
 
 Let's take a closer look at what is happening in the **SiglipVisionEmbeddings** class:
 
-![SigLIP Vision Embeddings Explained](images/SiglipVisionEmbeddings_explained.png)
+![SigLIP Vision Embeddings Explained](visualizations/SiglipVisionEmbeddings_explained.png)
 
 The **SiglipVisionEmbeddings** class is responsible for the first step in vision processing: converting a raw image into a sequence of contextualized embeddings for each patch that can be processed by the transformer encoder.
 
@@ -141,7 +141,7 @@ Let's break down what each component does in **SiglipVisionEmbeddings**:
 
 ### Implementation of SiglipVisionEmbeddings class
 
-![SigLIP Vision Embeddings Code](images/SiglipVisionEmbeddings_with_code.png)
+![SigLIP Vision Embeddings Code](visualizations/SiglipVisionEmbeddings_with_code.png)
 
 ```python
 class SiglipVisionEmbeddings(nn.Module):
@@ -194,13 +194,13 @@ After converting the image into contextualized embeddings, the SigLIP Vision Enc
 
 The encoder's job can be thought of as creating a "visual understanding" of the image - transforming raw pixel representations into semantic concepts that can be aligned with language.
 
-![SigLIP Vision Encoder Explained](images/SiglipVisionEncoder_explained.png)
+![SigLIP Vision Encoder Explained](visualizations/SiglipVisionEncoder_explained.png)
 
 Note that SigLIP uses a "pre-norm" architecture (normalizing before attention and MLP) rather than "post-norm" (which was common in earlier transformers). 
 
 ### Implementation of SiglipVisionEncoder class
 
-![SigLIP Vision Encoder Code](images/SiglipVisionEncoder_with_code.png)
+![SigLIP Vision Encoder Code](visualizations/SiglipVisionEncoder_with_code.png)
 
 ```python
 class SiglipVisionEncoder(nn.Module):
@@ -235,7 +235,7 @@ SiglipMLP is a simple multi-layer perceptron (MLP) that applies a feed-forward n
 
 Let's implement the **SiglipEncoderLayer** class.
 
-![SigLIP Encoder Layer Code](images/SiglipEncoderLayer_with_code.png)
+![SigLIP Encoder Layer Code](visualizations/SiglipEncoderLayer_with_code.png)
 
 ```python
 class SiglipEncoderLayer(nn.Module):
@@ -289,16 +289,16 @@ class SiglipEncoderLayer(nn.Module):
 The Vision Encoder effectively processes the relationships between different parts of an image, allowing the model to understand complex visual patterns and structures. The self-attention mechanism is particularly powerful as it enables each patch to gather information from all other patches, regardless of their spatial distance in the original image.
 
 Quick recap of the Vision Encoder that we already implemented:
-![SigLIP Vision Encoder](images/Contrastive_Vision_Encoder_explained.png)
+![SigLIP Vision Encoder](visualizations/Contrastive_Vision_Encoder_explained.png)
 
 Next block in SigLIP architecture is Linear Projection. 
 This block projects the hidden states from the Vision Encoder to a higher-dimensional space to match the dimension of the text embeddings.
 
-![SigLIP Linear Projection](images/PaligemmaMultimodalProjector_explained.png)
+![SigLIP Linear Projection](visualizations/PaligemmaMultimodalProjector_explained.png)
 
 Simply put, it's a single linear layer which is a simple matrix multiplication operation.
 
-![SigLIP Linear Projection](images/PaligemmaMultimodalProjector_with_code.png)
+![SigLIP Linear Projection](visualizations/PaligemmaMultimodalProjector_with_code.png)
 
 ```python
 
@@ -320,7 +320,7 @@ class PaliGemmaMultiModalProjector(nn.Module):
 Now, putting it all together, we have gone through the entire Siglip architecture and implemented it in PyTorch. Take a detailed look at the Siglip architecture below.
 We took an image as an input ([1, 3, 224, 244]), passed it through the SiglipVisionEmbeddings to project it into a high-dimensional space, then passed it through the SiglipVisionEncoder to process the image information through a series of transformer layers. The output of the Vision Encoder is then passed through the PaliGemmaMultiModalProjector to project it into the same space as the text embeddings. The final output is a tensor of shape [1, 256, 2048].
 
-![SigLIP Architecture](images/Siglip_explained.png)
+![SigLIP Architecture](visualizations/Siglip_explained.png)
 
 
 
@@ -446,14 +446,14 @@ For simplicity, during inference we typically process one image and text at a ti
 
 ### Implementing Transformer Decoder
 
-![GemmaForCasualLM Architecture](images/GemmaForCasualLM_explained.png)
+![GemmaForCasualLM Architecture](visualizations/GemmaForCasualLM_explained.png)
 
 Simply put, **GemmaForCasualLM** class is the implementation of Transformer Decoder from the paligemma architecture.
 It consists of a chain of transformer decoder layers, each containing attention and feed-forward network blocks with residual connections, implemented in the **GemmaDecoderLayer** class. After stacking **GemmaDecoderLayer** classes N times (in this case, 18 times) and adding RMS normalization, we get the **GemmaModel** class. Final linear layer is added to convert the hidden states to logits, followed by a softmax function to get the final output.
 
 Now let's look at the code implementation:
 
-![PaliGemma Implementation](images/GemmaForCasualLM_with_code.png)
+![PaliGemma Implementation](visualizations/GemmaForCasualLM_with_code.png)
 
 ```python
 class GemmaForCausalLM(nn.Module):
@@ -507,7 +507,7 @@ class GemmaForCausalLM(nn.Module):
 
 ### The Core of Gemma: GemmaModel Implementation
 
-![GemmaModel Implementation](images/GemmaModel_with_code.png)
+![GemmaModel Implementation](visualizations/GemmaModel_with_code.png)
 
 ```python
 class GemmaModel(nn.Module):
@@ -563,7 +563,7 @@ The `GemmaModel` serves as the backbone of the language processing capabilities 
 
 Each decoder layer in the Gemma architecture consists of Grouped-Query Attention and Feed-Forward Network components with specialized modifications:
 
-![GemmaDecoderLayer Implementation](images/GemmaDecoderLayer_with_code.png)
+![GemmaDecoderLayer Implementation](visualizations/GemmaDecoderLayer_with_code.png)
 
 ```python
 class GemmaDecoderLayer(nn.Module):
@@ -650,7 +650,7 @@ class GemmaDecoderLayer(nn.Module):
 
 Putting it all together, we have gone through the entire Gemma architecture and implemented it in PyTorch. Take a detailed look at the Gemma architecture below.
 
-![GemmaForCasualLM Architecture](images/GemmaForCasualLM_explained.png)
+![GemmaForCasualLM Architecture](visualizations/GemmaForCasualLM_explained.png)
 
 
 By integrating these sophisticated components, PaliGemma achieves remarkable multimodal capabilities, effectively connecting visual perception with language understanding and generation. The careful design of both the vision and language components, along with their integration, enables the model to process and reason about visual information in natural language.
